@@ -13,9 +13,6 @@ public class ExcelFields {
         this.fieldValues = fieldValues;
     }
 
-    public static boolean isFieldNamesEquals(String name1, String name2) {
-        return minimizeString(name1).equals(minimizeString(name2));
-    }
 
     public String getByFirstExistingNameOrByIndex(List<String> possibleFieldNames, int index) {
         String ans = "";
@@ -31,7 +28,7 @@ public class ExcelFields {
     public String getByFieldName(String fieldName) {
         int index = -1;
         for (int i = 0; i < fieldNames.size(); i++) {
-            if (isFieldNamesEquals(fieldName, fieldNames.get(i))) {
+            if (AuxiliaryControllerMethods.isNamesEquals(fieldName, fieldNames.get(i))) {
                 index = i;
                 break;
             }
@@ -48,15 +45,6 @@ public class ExcelFields {
         } else {
             return "";
         }
-    }
-
-    private static String minimizeString(String s) {
-        while (s.contains("  ")) {
-            s = s.replaceAll(" {2}", " ");
-        }
-        s = s.trim();
-        s = s.toLowerCase();
-        return s;
     }
 
 }

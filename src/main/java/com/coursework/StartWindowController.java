@@ -5,7 +5,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
-import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.TransferMode;
@@ -13,7 +12,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
@@ -29,7 +27,7 @@ public class StartWindowController {
 
     private final MainWindowExceptionHandler mainWindowExceptionHandler = new MainWindowExceptionHandler();
     @FXML
-    public Stage currentStage;
+    public Stage thisStage;
     boolean mainWindowClosedIncorrect = false;
     @FXML
     private File papersFile, reviewersFile;
@@ -57,7 +55,7 @@ public class StartWindowController {
     @FXML
     public void setUp(Stage stage) {
         FileChooser fileChooser = new FileChooser();
-        currentStage = stage;
+        thisStage = stage;
         reviewersStackPane.setOnMouseClicked((e) -> {
             fileChooser.setTitle("Открытие списка рецензентов");
             File file = fileChooser.showOpenDialog(stage);
@@ -74,12 +72,16 @@ public class StartWindowController {
         });
     }
 
-    Workbook getWorkbookFromFile(File file) throws IOException, InvalidFormatException {
-        if (getExtension(file).equals(".xlsx")) {
+    @FXML
+    void initialize() {
+    }
+
+    private Workbook getWorkbookFromFile(File file) throws IOException, InvalidFormatException {
+        if (AuxiliaryControllerMethods.getExtension(file).equals(".xlsx")) {
             try (Workbook workbook = new XSSFWorkbook(file)) {
                 return workbook;
             }
-        } else if (getExtension(file).equals(".xls")) {
+        } else if (AuxiliaryControllerMethods.getExtension(file).equals(".xls")) {
             try (Workbook workbook = new HSSFWorkbook(POIFSFileSystem.create(file))) {
                 return workbook;
             }
@@ -88,7 +90,7 @@ public class StartWindowController {
     }
 
     @FXML
-    void handleExcelFileDragOver(DragEvent event) {
+    private void handleExcelFileDragOver(DragEvent event) {
         if (event.getDragboard().hasFiles()) {
             if (isExcelFile(event.getDragboard().getFiles().get(0))) {
                 event.acceptTransferModes(TransferMode.ANY);
@@ -99,7 +101,7 @@ public class StartWindowController {
     }
 
     @FXML
-    void handleReviewersDragDropped(DragEvent event) {
+    private void handleReviewersDragDropped(DragEvent event) {
         List<File> files = event.getDragboard().getFiles();
         File file = files.get(0);
         if (isExcelFile(file)) {
@@ -108,7 +110,7 @@ public class StartWindowController {
     }
 
     @FXML
-    void handlePapersDragDropped(DragEvent event) {
+    private void handlePapersDragDropped(DragEvent event) {
         List<File> files = event.getDragboard().getFiles();
         File file = files.get(0);
         if (isExcelFile(file)) {
@@ -116,54 +118,40 @@ public class StartWindowController {
         }
     }
 
-    boolean isExcelFile(File file) {
-        String extension = getExtension(file);
+    private boolean isExcelFile(File file) {
+        String extension = AuxiliaryControllerMethods.getExtension(file);
         return extension.equals(".xlsx") || extension.equals(".xls");
     }
 
     @FXML
-    void initialize() {
-    }
-
-    private String getExtension(File file) {
-        String fileName = file.getName();
-        String extension = "";
-        int lastDotPosition = fileName.lastIndexOf('.');
-        if (lastDotPosition > -1) {
-            extension = fileName.substring(lastDotPosition);
-        }
-        return extension.toLowerCase();
-    }
-
-    @FXML
-    private void distributeButtonClicked() {
+    private void loadButtonClicked() {
         if (reviewersFile == null || papersFile == null) {
-            showAlertWindow("Выберите файлы со списками!", null, Alert.AlertType.WARNING);
+            AuxiliaryControllerMethods.showAlertWindow("Выберите файлы со списками!", null, Alert.AlertType.WARNING);
             return;
         }
         try {
-            currentStage.hide();
+            thisStage.hide();
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getClassLoader().getResource("app_design/MainWindow.fxml"));
             loader.load();
             Parent root = loader.getRoot();
-            Stage stage = new Stage();
-            stage.setScene(new Scene(root));
-            stage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("assets/icon.png")));
+            Stage mainWindowStage = new Stage();
+            mainWindowStage.setTitle("Распределение работ студентов");
+            mainWindowStage.setScene(new Scene(root));
+            mainWindowStage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("assets/icon.png")));
             MainWindowController mainWindowController = loader.getController();
-            stage.setOnCloseRequest((WindowEvent event) -> {
-                currentStage.close();
-            });
             mainWindowController.setMainWindowExceptionHandler(mainWindowExceptionHandler);
             mainWindowController.loadReviewersAndPapers(getWorkbookFromFile(reviewersFile), getWorkbookFromFile(papersFile));
+            mainWindowController.setUp(thisStage, mainWindowStage);
             if (!mainWindowClosedIncorrect) {
-                stage.showAndWait();
+                mainWindowStage.showAndWait();
             }
         } catch (FileNotFoundException exception) {
+            thisStage.show();
             String title = null,
                     header = "Ошибка при попытке открытия Excel-файлов",
                     content = "Убедитесь, что файлы существуют и не открыты другими приложениями";
-            showAlertWindow(header, content, Alert.AlertType.WARNING);
+            AuxiliaryControllerMethods.showAlertWindow(header, content, Alert.AlertType.WARNING);
         } catch (Exception e) {
             e.printStackTrace();
             mainWindowExceptionHandler.run();
@@ -172,24 +160,14 @@ public class StartWindowController {
         }
     }
 
-    private void showAlertWindow(String header, String content, Alert.AlertType type) {
-        Alert alert = new Alert(type);
-        alert.setHeaderText(header);
-        Label label = new Label(content);
-        label.setWrapText(true);
-        alert.getDialogPane().setContent(label);
-        alert.showAndWait();
-    }
-
     class MainWindowExceptionHandler implements Runnable {
-
         @Override
         public void run() {
             mainWindowClosedIncorrect = true;
-            currentStage.show();
+            thisStage.show();
             String header = "Ошибка при работе с Excel-файлами",
                     content = "Убедитесь, что загруженные списки в Excel-файлах имеют правильный формат";
-            showAlertWindow(header, content, Alert.AlertType.ERROR);
+            AuxiliaryControllerMethods.showAlertWindow(header, content, Alert.AlertType.ERROR);
         }
     }
 }

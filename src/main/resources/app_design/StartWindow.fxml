@@ -10,7 +10,7 @@
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="360.0" prefWidth="700.0" style="-fx-background-color: #D4D0C8;" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.coursework.StartWindowController">
    <children>
-      <Button fx:id="distributeButton" alignment="CENTER" layoutX="525.0" layoutY="291.0" mnemonicParsing="false" onMouseClicked="#distributeButtonClicked" prefHeight="33.0" prefWidth="110.0" style="-fx-background-color: #58D68D; -fx-background-radius: 4;" text="Загрузить" textFill="#f0f0f0">
+      <Button fx:id="distributeButton" alignment="CENTER" layoutX="525.0" layoutY="291.0" mnemonicParsing="false" onMouseClicked="#loadButtonClicked" prefHeight="33.0" prefWidth="110.0" style="-fx-background-color: #58D68D; -fx-background-radius: 4;" text="Загрузить" textFill="#f0f0f0">
          <font>
             <Font name="System Bold" size="13.0" />
          </font>

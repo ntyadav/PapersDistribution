@@ -1,5 +1,7 @@
 package com.coursework;
 
+import org.apache.poi.ss.usermodel.Row;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,19 +60,31 @@ class Reviewer {
         return studentPapers.size() == maxPapersNum;
     }
 
-    public void resetPapers() {
-        for (Paper paper : studentPapers) {
-            paper.setReviewer(null);
-        }
-        studentPapers.clear();
-    }
 
     public ArrayList<CCS.Subject> getSubjectAreas() {
         return subjectAreas;
     }
 
+    public void printToRow(Row row) {
+        String email = excelFields.getByFirstExistingNameOrByIndex(
+                List.of("Эл. почта", "Электронная почта", "Почта", "E-mail", "Email"), 1).trim();
+        int i = 0;
+        row.createCell(i++).setCellValue(name);
+        row.createCell(i++).setCellValue(email);
+        String subdivision = excelFields.getByFirstExistingNameOrByIndex(List.of("Подразделение"), 3);
+        if (!subdivision.equals("")) {
+            row.createCell(i++).setCellValue(subdivision);
+        }
+        String subjectsString = excelFields.getByFirstExistingNameOrByIndex(List.of("ACM CCS", "CCS"), 6);
+        if (!subjectsString.equals("")) {
+            row.createCell(i).setCellValue(subjectsString);
+        }
+    }
+
     @Override
     public String toString() {
-        return name + " " + excelFields.getByFieldName("Эл. почта").trim() + " (" + studentPapers.size() + " / " + maxPapersNum + ")";
+        String email = excelFields.getByFirstExistingNameOrByIndex(
+                List.of("Эл. почта", "Электронная почта", "Почта", "E-mail", "Email"), 1).trim();
+        return name + " " + email + " (" + studentPapers.size() + " / " + maxPapersNum + ")";
     }
 }
