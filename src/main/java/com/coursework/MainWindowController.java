@@ -2,15 +2,29 @@ package com.coursework;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextFlow;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ooxml.POIXMLProperties;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.LinkedList;
 
 public class MainWindowController {
 
@@ -20,6 +34,13 @@ public class MainWindowController {
     ListView<TextFlow> distributionListView;
     @FXML
     Label promptLabel;
+    @FXML
+    Stage thisStage;
+    @FXML
+    Button exportButton;
+
+
+    BlacklistController blacklistController;
 
     Distribution distribution;
     Paper movingPaper = null;
@@ -39,28 +60,116 @@ public class MainWindowController {
                 exceptionHandle();
             }
         } catch (Exception exception) {
+            exception.printStackTrace();
             exceptionHandle();
         }
     }
 
+    public void setUp(Stage startWindowStage, Stage mainWindowStage) {
+        thisStage = mainWindowStage;
+        mainWindowStage.setMinWidth(700);
+        mainWindowStage.setMinHeight(360);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getClassLoader().getResource("app_design/Blacklist.fxml"));
+            Parent root = loader.load();
+            Stage blacklistStage = new Stage();
+            blacklistStage.setScene(new Scene(root));
+            blacklistController = loader.getController();
+            blacklistController.setUp(blacklistStage);
+            blacklistStage.setOnHidden((WindowEvent event) -> {
+                mainWindowStage.toFront();
+            });
+        } catch (Exception exception) {
+            exception.printStackTrace();
+            return;
+        }
+        mainWindowStage.setOnCloseRequest((WindowEvent event) -> {
+            startWindowStage.close();
+            blacklistController.getStage().close();
+        });
+    }
+
     @FXML
-    void distributeButtonClicked() {
+    private synchronized void distributeButtonClicked() {
         if (!distribution.hungarianAlgorithmDistribution()) {
             exceptionHandle();
             return;
         }
         drawDistributionList();
+        exportButton.setDisable(false);
     }
 
     @FXML
-    void drawDistributionList() {
+    private void exportButtonClicked(ActionEvent event) {
+        FileChooser fileChooser = new FileChooser();
+        FileChooser.ExtensionFilter extFilter1 = new FileChooser.
+                ExtensionFilter("Excel file .xlsx", "*.xlsx");
+        FileChooser.ExtensionFilter extFilter2 = new FileChooser.
+                ExtensionFilter("Excel file .xls", "*.xls");
+        fileChooser.getExtensionFilters().add(extFilter1);
+        fileChooser.getExtensionFilters().add(extFilter2);
+        File file = fileChooser.showSaveDialog(thisStage);
+
+        try {
+            if (file != null) {
+                Workbook workbook;
+                final String author = "Distribution app";
+                if (AuxiliaryControllerMethods.getExtension(file).equals(".xlsx")) {
+                    workbook = new XSSFWorkbook();
+                    POIXMLProperties xmlProps = ((XSSFWorkbook) workbook).getProperties();
+                    POIXMLProperties.CoreProperties coreProps = xmlProps.getCoreProperties();
+                    coreProps.setCreator(author);
+                } else {
+                    workbook = new HSSFWorkbook();
+                }
+                Sheet sheet = workbook.createSheet("Distribution");
+                int i = 0;
+                LinkedList<Reviewer> emptyReviewers = new LinkedList<>();
+                for (Reviewer reviewer : distribution.getReviewers()) {
+                    if (reviewer.getStudentPapers().isEmpty()) {
+                        emptyReviewers.add(reviewer);
+                        continue;
+                    }
+                        Row row = sheet.createRow(i++);
+                        reviewer.printToRow(row);
+                        for (Paper paper : reviewer.getStudentPapers()) {
+                            row = sheet.createRow(i++);
+                            paper.printToRow(row);
+                        }
+                        sheet.createRow(i++);
+                }
+                for (Reviewer reviewer : emptyReviewers) {
+                    Row row = sheet.createRow(i++);
+                    reviewer.printToRow(row);
+                    sheet.createRow(i++);
+                }
+                FileOutputStream outputStream = new FileOutputStream(file.getPath());
+                workbook.write(outputStream);
+                workbook.close();
+            }
+        } catch (Exception exception) {
+            AuxiliaryControllerMethods.showAlertWindow(
+                    "Ошибка при попытки сохранить Excel-файл", "", Alert.AlertType.ERROR);
+            exception.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void drawDistributionList() {
         ContextMenu contextMenu = new ContextMenu();
         MenuItem moveItem = new MenuItem("Переместить");
         MenuItem blackListItem = new MenuItem("Черный список");
         contextMenu.getItems().addAll(moveItem, blackListItem);
         moveItem.setOnAction((ActionEvent event) -> {
             movingPaper = selectedPaper;
+            selectedPaper = null;
             promptLabel.setVisible(true);
+        });
+        blackListItem.setOnAction((ActionEvent event) -> {
+            promptLabel.setVisible(false);
+            movingPaper = null;
+            blacklistController.draw(selectedPaper, distribution);
+            selectedPaper = null;
         });
         distributionListView.getItems().clear();
         for (var reviewer : distribution.getReviewers()) {
@@ -70,7 +179,6 @@ public class MainWindowController {
                     if (mouseEvent.getClickCount() == 2 && movingPaper != null) {
                         reviewer.addPaper(movingPaper);
                         movingPaper = null;
-                        selectedPaper = null;
                         drawDistributionList();
                         promptLabel.setVisible(false);
                     }
@@ -82,6 +190,8 @@ public class MainWindowController {
                 paperTextFlow.setOnContextMenuRequested((ContextMenuEvent event) -> {
                     selectedPaper = paper;
                     contextMenu.show(paperTextFlow, event.getScreenX(), event.getScreenY());
+                    promptLabel.setVisible(false);
+                    movingPaper = null;
                 });
                 distributionListView.getItems().add(paperTextFlow);
             }
@@ -89,7 +199,9 @@ public class MainWindowController {
     }
 
     private void exceptionHandle() {
-        distributionListView.getScene().getWindow().hide();
+        if (distributionListView.getScene() != null) {
+            distributionListView.getScene().getWindow().hide();
+        }
         mainWindowExceptionHandler.run();
     }
 

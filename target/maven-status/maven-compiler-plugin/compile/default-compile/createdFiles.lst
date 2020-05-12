@@ -9,3 +9,5 @@ com\coursework\Reviewer.class
 com\coursework\StartWindowController.class
 com\coursework\Paper.class
 com\coursework\MainWindowController.class
+com\coursework\AuxiliaryControllerMethods.class
+com\coursework\BlacklistController.class

@@ -31,23 +31,19 @@ public class Distribution {
         final int n = papers.size();
         final int m = reviewerPlaces.size();
         int[][] a = new int[n + 1][m + 1];
-        int reviewerPlacesCounter = 0;
-        for (Reviewer reviewer : reviewers) {
-            for (int i = 0; i < papers.size(); i++) {
-                Paper paper = papers.get(i);
-                int f = CCS.suitabilityOfPaperToReviewerFunction(reviewer.getSubjectAreas(),
-                        paper.getSubjectAreas());
-                for (int k = 0; k < reviewer.maxPapersNum; k++) {
-                    a[i + 1][reviewerPlacesCounter + k + 1] = f * -1;
-                }
+        arrayRandomShuffle(reviewerPlaces);
+        for (int i = 0; i < papers.size(); i++) {
+            for (int j = 0; j < reviewerPlaces.size(); j++) {
+                int f = CCS.paperToReviewerSuitabilityFunction(reviewerPlaces.get(j), papers.get(i));
+                a[i + 1][j + 1] = f;
             }
-            reviewerPlacesCounter += reviewer.maxPapersNum;
         }
         int[] u = new int[n + 1], v = new int[m + 1], p = new int[m + 1], way = new int[m + 1];
         for (int i = 1; i <= n; i++) {
             p[0] = i;
             int j0 = 0;
             int[] minv = new int[m + 1];
+            Arrays.fill(minv, CCS.INF);
             boolean[] used = new boolean[m + 1];
             Arrays.fill(used, false);
             do {
@@ -55,7 +51,7 @@ public class Distribution {
                     return false;
                 }
                 used[j0] = true;
-                int i0 = p[j0], delta = 1, j1 = 0;
+                int i0 = p[j0], delta = CCS.INF, j1 = 0;
                 for (int j = 1; j <= m; ++j)
                     if (!used[j]) {
                         int cur = a[i0][j] - u[i0] - v[j];
@@ -92,22 +88,22 @@ public class Distribution {
         return true;
     }
 
-    public void randomDistribution() {
+/*    public void randomDistribution() {
         if (reviewers.isEmpty()) {
             return;
         }
         for (Reviewer reviewer : reviewers) {
-            reviewer.resetPapers();
+            reviewer.clearPapers();
         }
         ArrayList<Reviewer> reviewersCopy = new ArrayList<>(reviewers);
-        shuffleArray(reviewersCopy);
+        arrayRandomShuffle(reviewersCopy);
         int k = 0;
         for (int i = 0; i < papers.size(); i++) {
             while (k < reviewers.size() && reviewersCopy.get(k).hasMaxPapersNum()) {
                 reviewersCopy.remove(reviewersCopy.get(k));
             }
             if (k >= reviewersCopy.size()) {
-                shuffleArray(reviewersCopy);
+                arrayRandomShuffle(reviewersCopy);
                 k = 0;
                 i--;
                 continue;
@@ -115,7 +111,7 @@ public class Distribution {
             reviewersCopy.get(k).addPaper(papers.get(i));
             k++;
         }
-    }
+    }*/
 
     public boolean loadReviewersFromExcelFile(Workbook workbook) {
         reviewers.clear();
@@ -127,7 +123,8 @@ public class Distribution {
             } else {
                 ExcelFields excelFields = new ExcelFields(fieldNames, readWorkbookRow(row));
                 String status = excelFields.getByFirstExistingNameOrByIndex(List.of("Статус"), 4);
-                if (ExcelFields.isFieldNamesEquals("Согласие", status) || ExcelFields.isFieldNamesEquals("В комиссии", status)) {
+                if (AuxiliaryControllerMethods.isNamesEquals("Согласие", status) ||
+                        AuxiliaryControllerMethods.isNamesEquals("В комиссии", status)) {
                     Reviewer reviewer = new Reviewer(excelFields);
                     reviewers.add(reviewer);
                     if (!reviewer.isCorrect()) {
@@ -173,7 +170,7 @@ public class Distribution {
         return inputStrings;
     }
 
-    private static <T> void shuffleArray(ArrayList<T> array) {
+    private static <T> void arrayRandomShuffle(ArrayList<T> array) {
         Random random = new Random();
         for (int i = array.size() - 1; i > 0; i--) {
             int j = random.nextInt(i + 1);

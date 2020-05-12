@@ -1,8 +1,11 @@
 package com.coursework;
 
-import javafx.scene.image.Image;
+import javafx.scene.control.Alert;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -10,13 +13,14 @@ import java.util.Stack;
 
 public class CCS {
 
-    static  Subject root;
-    static  ArrayList<Subject> lcaDfsSubjectsOrder;
+    public static final int INF = 10000;
+    static Subject root;
+    static ArrayList<Subject> lcaDfsSubjectsOrder;
 
     static {
         root = new Subject("root");
         try {
-             InputStream in1 = CCS.class.getClassLoader().getResourceAsStream("assets/CCS.txt");
+            InputStream in1 = CCS.class.getClassLoader().getResourceAsStream("assets/CCS.txt");
             InputStreamReader in2 = new InputStreamReader(in1);
             final int levelIndent = 4;
             BufferedReader in = new BufferedReader(in2);
@@ -86,18 +90,29 @@ public class CCS {
             edgeSymbol = "→";
         }
         String[] subjectNames = s.split(separator);
-        for (String subjectName : subjectNames) {
-            var subjectPath = subjectName.split(edgeSymbol);
-            String shortSubjectName = subjectPath[subjectPath.length - 1];
-            Subject subject = getSubject(shortSubjectName);
-            if (subject != null) {
+        for (String subjectFullName : subjectNames) {
+            var subjectPath = subjectFullName.split(edgeSymbol);
+            Subject subject = root;
+            for (String subjectName : subjectPath) {
+                if (AuxiliaryControllerMethods.minimizeString(subjectName).isEmpty()) {
+                    continue;
+                }
+                subject = subject.getFirstFoundChildByName(subjectName);
+                if (subject == null) {
+                    AuxiliaryControllerMethods.showAlertWindow("Некорректный формат темы",
+                            "Не удалось определить тему " + "« " + subjectFullName + " »", Alert.AlertType.ERROR);
+
+                    break;
+                }
+            }
+            if (subject != root && subject != null) {
                 subjects.add(subject);
             }
         }
         return subjects;
     }
 
-    public static void printTree(Subject root, Integer depth) {
+/*    public static void printTree(Subject root, Integer depth) {
         if (root == null || depth == null) {
             root = CCS.root;
             depth = 0;
@@ -110,32 +125,30 @@ public class CCS {
         for (Subject child : root.getChildren()) {
             printTree(child, depth + 1);
         }
-    }
+    }*/
 
-    public static int suitabilityOfPaperToReviewerFunction(ArrayList<Subject> reviewerSubjects,
-                                                           ArrayList<Subject> paperSubjects) {
-        double percent = 0;
-        for (Subject paperSubject : paperSubjects) {
-            for (Subject reviewerSubject : reviewerSubjects) {
+    public static int paperToReviewerSuitabilityFunction(Reviewer reviewer, Paper paper) {
+        if (paper.getBlacklist().contains(reviewer)) {
+            return INF;
+        }
+        int min = INF / 2;
+        final int k = 3;
+        for (Subject paperSubject : paper.getSubjectAreas()) {
+            for (Subject reviewerSubject : reviewer.getSubjectAreas()) {
                 Subject lca = lastCommonAncestor(reviewerSubject, paperSubject);
-                if (lca == root) {
-                    continue;
+                int f = INF / 2;
+                if (lca == paperSubject) {
+                    f = (reviewerSubject.height - lca.height) * k;
+                } else if (lca == reviewerSubject) {
+                    f = paperSubject.height - lca.height;
                 }
-                int maxDepth = reviewerSubject.getMaxChildHeight();
-                int maxPath = maxDepth * 2;
-                if (lca == reviewerSubject) {
-                    percent += 1 - ((double) paperSubject.height - reviewerSubject.height) / (maxDepth * 1.5);
-                } else {
-                    percent += Math.sqrt(1 - ((double) reviewerSubject.height - lca.height +
-                            paperSubject.height - lca.height) / (maxPath * 1.5));
-                }
-
+                min = Math.min(min, f);
             }
         }
-        return (int) Math.round(percent * 1000);
+        return min;
     }
 
-    public static Subject getSubject(String subjectName) {
+/*    public static Subject getSubject(String subjectName) {
         Queue<Subject> queue = new LinkedList<>();
         queue.add(root);
         while (!queue.isEmpty()) {
@@ -148,7 +161,7 @@ public class CCS {
             }
         }
         return null;
-    }
+    }*/
 
     private static void preprocessingLcaDfs(Subject subtreeRoot, int height) {
         lcaDfsSubjectsOrder.add(subtreeRoot);
@@ -159,49 +172,30 @@ public class CCS {
         }
     }
 
-    private static boolean isNamesEquals(String name1, String name2) {
-        return minimizeString(name1).equals(minimizeString(name2));
-    }
-
-    private static String minimizeString(String s) {
-        while (s.contains("(") && s.contains(")")) {
-            s = s.substring(0, s.indexOf('(')) + s.substring(s.indexOf(')') + 1);
-        }
-        while (s.contains("  ")) {
-            s = s.replaceAll(" {2}", " ");
-        }
-        s = s.trim();
-        s = s.toLowerCase();
-        return s;
-    }
-
     public static class Subject {
         private final String name;
         private final ArrayList<Subject> children = new ArrayList<>();
         private Subject parent = null;
-        private int height, maxChildHeight = -1;
+        private int height;
 
         public Subject(String name) {
             this.name = name;
         }
 
-        public int getMaxChildHeight() {
-            if (maxChildHeight != -1) {
-                return maxChildHeight;
-            }
-            if (children.isEmpty()) {
-                return height;
-            }
-            int max = height;
-            for (Subject subject : children) {
-                max = Math.max(max, subject.getMaxChildHeight());
-            }
-            maxChildHeight = max;
-            return max;
-        }
 
-        public ArrayList<Subject> getChildren() {
-            return children;
+        public Subject getFirstFoundChildByName(String childName) {
+            Queue<Subject> queue = new LinkedList<>();
+            queue.add(this);
+            while (!queue.isEmpty()) {
+                Subject subject = queue.remove();
+                for (Subject child : subject.children) {
+                    queue.add(child);
+                    if (AuxiliaryControllerMethods.isNamesEquals(child.name, childName)) {
+                        return subject;
+                    }
+                }
+            }
+            return null;
         }
 
         private void addChild(Subject subject) {
@@ -210,15 +204,5 @@ public class CCS {
                 subject.parent = this;
             }
         }
-
-/*        public Subject getChild(String childName) {
-            Subject res = null;
-            for (Subject subject : children) {
-                if (subject.name.equals(childName)) {
-                    res = subject;
-                }
-            }
-            return res;
-        }*/
     }
 }
