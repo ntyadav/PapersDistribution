@@ -13,14 +13,20 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ooxml.POIXMLProperties;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class StartWindowController {
@@ -121,6 +127,48 @@ public class StartWindowController {
     private boolean isExcelFile(File file) {
         String extension = AuxiliaryControllerMethods.getExtension(file);
         return extension.equals(".xlsx") || extension.equals(".xls");
+    }
+
+    @FXML
+    private void importButtonClicked()  {
+        FileChooser fileChooser = new FileChooser();
+        FileChooser.ExtensionFilter extFilter1 = new FileChooser.
+                ExtensionFilter("Excel file .xlsx", "*.xlsx");
+        FileChooser.ExtensionFilter extFilter2 = new FileChooser.
+                ExtensionFilter("Excel file .xls", "*.xls");
+        fileChooser.getExtensionFilters().add(extFilter1);
+        fileChooser.getExtensionFilters().add(extFilter2);
+        File file = fileChooser.showOpenDialog(thisStage);
+
+        try {
+            thisStage.hide();
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getClassLoader().getResource("app_design/MainWindow.fxml"));
+            loader.load();
+            Parent root = loader.getRoot();
+            Stage mainWindowStage = new Stage();
+            mainWindowStage.setTitle("Распределение работ студентов");
+            mainWindowStage.setScene(new Scene(root));
+            mainWindowStage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("assets/icon.png")));
+            MainWindowController mainWindowController = loader.getController();
+            mainWindowController.setMainWindowExceptionHandler(mainWindowExceptionHandler);
+            mainWindowController.loadDistribution(getWorkbookFromFile(file));
+            mainWindowController.setUp(thisStage, mainWindowStage);
+            if (!mainWindowClosedIncorrect) {
+                mainWindowStage.showAndWait();
+            }
+        } catch (FileNotFoundException exception) {
+            thisStage.show();
+            String title = null,
+                    header = "Ошибка при попытке открытия Excel-файлов",
+                    content = "Убедитесь, что файлы существуют и не открыты другими приложениями";
+            AuxiliaryControllerMethods.showAlertWindow(header, content, Alert.AlertType.WARNING);
+        } catch (Exception e) {
+            e.printStackTrace();
+            mainWindowExceptionHandler.run();
+        } finally {
+            mainWindowClosedIncorrect = false;
+        }
     }
 
     @FXML

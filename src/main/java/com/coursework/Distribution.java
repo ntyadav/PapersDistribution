@@ -88,30 +88,44 @@ public class Distribution {
         return true;
     }
 
-/*    public void randomDistribution() {
-        if (reviewers.isEmpty()) {
-            return;
-        }
-        for (Reviewer reviewer : reviewers) {
-            reviewer.clearPapers();
-        }
-        ArrayList<Reviewer> reviewersCopy = new ArrayList<>(reviewers);
-        arrayRandomShuffle(reviewersCopy);
-        int k = 0;
-        for (int i = 0; i < papers.size(); i++) {
-            while (k < reviewers.size() && reviewersCopy.get(k).hasMaxPapersNum()) {
-                reviewersCopy.remove(reviewersCopy.get(k));
+    /*    public void randomDistribution() {
+            if (reviewers.isEmpty()) {
+                return;
             }
-            if (k >= reviewersCopy.size()) {
-                arrayRandomShuffle(reviewersCopy);
-                k = 0;
-                i--;
-                continue;
+            for (Reviewer reviewer : reviewers) {
+                reviewer.clearPapers();
             }
-            reviewersCopy.get(k).addPaper(papers.get(i));
-            k++;
+            ArrayList<Reviewer> reviewersCopy = new ArrayList<>(reviewers);
+            arrayRandomShuffle(reviewersCopy);
+            int k = 0;
+            for (int i = 0; i < papers.size(); i++) {
+                while (k < reviewers.size() && reviewersCopy.get(k).hasMaxPapersNum()) {
+                    reviewersCopy.remove(reviewersCopy.get(k));
+                }
+                if (k >= reviewersCopy.size()) {
+                    arrayRandomShuffle(reviewersCopy);
+                    k = 0;
+                    i--;
+                    continue;
+                }
+                reviewersCopy.get(k).addPaper(papers.get(i));
+                k++;
+            }
+        }*/
+    public ArrayList<String> readWorkbookRow(Row row) {
+        ArrayList<String> inputStrings = new ArrayList<>();
+        for (Cell cell : row) {
+            while (cell.getColumnIndex() > inputStrings.size()) {
+                inputStrings.add("");
+            }
+            if (cell.getCellType() == CellType.NUMERIC) {
+                inputStrings.add(((Integer) (int) cell.getNumericCellValue()).toString());
+            } else if (cell.getCellType() == CellType.STRING) {
+                inputStrings.add(cell.getStringCellValue());
+            }
         }
-    }*/
+        return inputStrings;
+    }
 
     public boolean loadReviewersFromExcelFile(Workbook workbook) {
         reviewers.clear();
@@ -122,7 +136,7 @@ public class Distribution {
                 fieldNames = readWorkbookRow(row);
             } else {
                 ExcelFields excelFields = new ExcelFields(fieldNames, readWorkbookRow(row));
-                String status = excelFields.getByFirstExistingNameOrByIndex(List.of("Статус"), 4);
+                String status = excelFields.getFieldValue(ExcelFields.ReviewerField.STATUS);
                 if (AuxiliaryControllerMethods.isNamesEquals("Согласие", status) ||
                         AuxiliaryControllerMethods.isNamesEquals("В комиссии", status)) {
                     Reviewer reviewer = new Reviewer(excelFields);
@@ -134,6 +148,60 @@ public class Distribution {
             }
         }
         return fieldNames != null && !fieldNames.isEmpty() && !reviewers.isEmpty();
+    }
+
+    public boolean loadDistribution(Workbook workbook) {
+        Sheet sheet = workbook.getSheetAt(0);
+        ArrayList<String> fieldNames = null;
+        int i = -1;
+        while (i < sheet.getLastRowNum()) {
+            Row row = sheet.getRow(++i);
+            if (fieldNames == null) {
+                fieldNames = readWorkbookRow(row);
+                continue;
+            }
+            if (row == null || row.getCell(0) == null)
+                continue;
+            if (AuxiliaryControllerMethods.isNamesEquals(row.getCell(0).getStringCellValue(), ("Рецензенты без работ:"))) {
+                break;
+            }
+            ExcelFields excelFields = new ExcelFields(fieldNames, readWorkbookRow(row));
+            Paper paper = new Paper(excelFields);
+            papers.add(paper);
+            if (!paper.isCorrect()) {
+                return false;
+            }
+            Reviewer reviewer = new Reviewer(excelFields);
+            boolean b = true;
+            for (Reviewer other : reviewers) {
+                if (reviewer.equals(other)) {
+                    reviewer = other;
+                    b = false;
+                    break;
+                }
+            }
+            if (b)
+                reviewers.add(reviewer);
+            reviewer.addPaper(paper);
+            if (!reviewer.isCorrect()) {
+                return false;
+            }
+        }
+        fieldNames = null;
+        while (i < sheet.getLastRowNum()) {
+            Row row = sheet.getRow(++i);
+            if (fieldNames == null) {
+                fieldNames = readWorkbookRow(row);
+            } else {
+                ExcelFields excelFields = new ExcelFields(fieldNames, readWorkbookRow(row));
+                    Reviewer reviewer = new Reviewer(excelFields);
+                    reviewers.add(reviewer);
+                    if (!reviewer.isCorrect()) {
+                        return false;
+                    }
+            }
+        }
+        return true;
     }
 
     public boolean loadPapersFromExcelFile(Workbook workbook) {
@@ -155,20 +223,6 @@ public class Distribution {
         return fieldNames != null && !fieldNames.isEmpty() && !papers.isEmpty();
     }
 
-    private ArrayList<String> readWorkbookRow(Row row) {
-        ArrayList<String> inputStrings = new ArrayList<>();
-        for (Cell cell : row) {
-            while (cell.getColumnIndex() > inputStrings.size()) {
-                inputStrings.add("");
-            }
-            if (cell.getCellType() == CellType.NUMERIC) {
-                inputStrings.add(((Integer) (int) cell.getNumericCellValue()).toString());
-            } else if (cell.getCellType() == CellType.STRING) {
-                inputStrings.add(cell.getStringCellValue());
-            }
-        }
-        return inputStrings;
-    }
 
     private static <T> void arrayRandomShuffle(ArrayList<T> array) {
         Random random = new Random();
