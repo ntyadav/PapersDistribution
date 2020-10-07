@@ -1,4 +1,5 @@
 com\coursework\MainLauncher.class
+com\coursework\ExcelFields$ReviewerField.class
 com\coursework\ExcelFields.class
 com\coursework\Distribution.class
 com\coursework\Main.class
@@ -7,7 +8,9 @@ com\coursework\CCS.class
 com\coursework\CCS$Subject.class
 com\coursework\Reviewer.class
 com\coursework\StartWindowController.class
+com\coursework\ExcelFields$1.class
 com\coursework\Paper.class
+com\coursework\ExcelFields$PaperField.class
 com\coursework\MainWindowController.class
 com\coursework\AuxiliaryControllerMethods.class
 com\coursework\BlacklistController.class

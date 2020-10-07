@@ -52,6 +52,20 @@ public class MainWindowController {
         this.mainWindowExceptionHandler = mainWindowExceptionHandler;
     }
 
+    public void loadDistribution(Workbook workbook) {
+        try {
+            distribution = new Distribution();
+            if (!distribution.loadDistribution(workbook)) {
+                exceptionHandle();
+            }
+            drawDistributionList();
+            exportButton.setDisable(false);
+        } catch (Exception exception) {
+            exception.printStackTrace();
+            exceptionHandle();
+        }
+    }
+
     public void loadReviewersAndPapers(Workbook reviewersWorkbook, Workbook papersWorkbook) {
         try {
             distribution = new Distribution();
@@ -125,23 +139,41 @@ public class MainWindowController {
                 Sheet sheet = workbook.createSheet("Distribution");
                 int i = 0;
                 LinkedList<Reviewer> emptyReviewers = new LinkedList<>();
+                Row firstRow = sheet.createRow(i++);
+                int j = 0;
+                String[] columnTitles = {"Работа", "ACM CCS работы", "ФИО рецензента", "Подразделение", "ACM CCS рецензента",
+                        "Макс. кол-во работ рецензента", "Почта рецензента"};
+                for (String s : columnTitles) {
+                    firstRow.createCell(j++).setCellValue(s);
+                }
                 for (Reviewer reviewer : distribution.getReviewers()) {
                     if (reviewer.getStudentPapers().isEmpty()) {
                         emptyReviewers.add(reviewer);
                         continue;
                     }
+                    for (Paper paper : reviewer.getStudentPapers()) {
                         Row row = sheet.createRow(i++);
-                        reviewer.printToRow(row);
-                        for (Paper paper : reviewer.getStudentPapers()) {
-                            row = sheet.createRow(i++);
-                            paper.printToRow(row);
-                        }
-                        sheet.createRow(i++);
+                        paper.printRow(row);
+                    }
+                }
+                sheet.createRow(i++);
+                sheet.createRow(i++);
+                sheet.createRow(i++).createCell(0).setCellValue("Рецензенты без работ:");
+                Row reviewerFieldNamesRow = sheet.createRow(i++);
+                j = 0;
+                for (ExcelFields.ReviewerField field : ExcelFields.ReviewerField.values()) {
+                    reviewerFieldNamesRow.createCell(j++).setCellValue(field.getSynonym());
                 }
                 for (Reviewer reviewer : emptyReviewers) {
                     Row row = sheet.createRow(i++);
-                    reviewer.printToRow(row);
-                    sheet.createRow(i++);
+                    j = 0;
+                    for (ExcelFields.ReviewerField field : ExcelFields.ReviewerField.values()) {
+                        if (field == ExcelFields.ReviewerField.MAX_PAPER_NUM) {
+                            row.createCell(j++).setCellValue(Integer.parseInt(reviewer.excelFields.getFieldValue(field)));
+                        } else {
+                            row.createCell(j++).setCellValue(reviewer.excelFields.getFieldValue(field));
+                        }
+                    }
                 }
                 FileOutputStream outputStream = new FileOutputStream(file.getPath());
                 workbook.write(outputStream);
@@ -155,7 +187,7 @@ public class MainWindowController {
     }
 
     @FXML
-    private void drawDistributionList() {
+    public void drawDistributionList() {
         ContextMenu contextMenu = new ContextMenu();
         MenuItem moveItem = new MenuItem("Переместить");
         MenuItem blackListItem = new MenuItem("Черный список");
