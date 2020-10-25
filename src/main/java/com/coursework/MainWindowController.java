@@ -24,10 +24,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class MainWindowController {
 
@@ -41,6 +38,8 @@ public class MainWindowController {
     Stage thisStage;
     @FXML
     Button exportButton;
+    @FXML
+    Button exportFuncButton;
 
 
     BlacklistController blacklistController;
@@ -195,6 +194,83 @@ public class MainWindowController {
             exception.printStackTrace();
         }
     }
+
+    @FXML
+    private void exportFuncButtonClicked(ActionEvent event) {
+        FileChooser fileChooser = new FileChooser();
+        FileChooser.ExtensionFilter extFilter1 = new FileChooser.
+                ExtensionFilter("Excel file .xlsx", "*.xlsx");
+        FileChooser.ExtensionFilter extFilter2 = new FileChooser.
+                ExtensionFilter("Excel file .xls", "*.xls");
+        fileChooser.getExtensionFilters().add(extFilter1);
+        fileChooser.getExtensionFilters().add(extFilter2);
+        File file = fileChooser.showSaveDialog(thisStage);
+
+        try {
+            if (file != null) {
+                Workbook workbook;
+                final String author = "Distribution app";
+                if (AuxiliaryControllerMethods.getExtension(file).equals(".xlsx")) {
+                    workbook = new XSSFWorkbook();
+                    POIXMLProperties xmlProps = ((XSSFWorkbook) workbook).getProperties();
+                    POIXMLProperties.CoreProperties coreProps = xmlProps.getCoreProperties();
+                    coreProps.setCreator(author);
+                } else {
+                    workbook = new HSSFWorkbook();
+                }
+                Sheet sheet = workbook.createSheet("Sorted Function Values for Each Paper");
+                class FuncReviewerPair implements Comparable<FuncReviewerPair>
+                {
+                    final int f;
+                    final Reviewer reviewer;
+
+                    public FuncReviewerPair(int f, Reviewer reviewer) {
+                        this.f = f;
+                        this.reviewer = reviewer;
+                    }
+
+                    @Override
+                    public int compareTo(FuncReviewerPair other) {
+                        if (other.f == f) {
+                            return reviewer.getName().compareTo(other.reviewer.getName());
+                        }
+                        return f - other.f;
+                    }
+                }
+                ArrayList<FuncReviewerPair> fList = new ArrayList<>();
+                int i = -1;
+                for (Paper paper : distribution.getPapers()) {
+                    Row paperRow = sheet.createRow(++i);
+                    paperRow.createCell(0).setCellValue(paper.getTitle());
+                    paperRow.createCell(1).setCellValue(paper.excelFields.getFieldValue(ExcelFields.PaperField.ACM_CCS));
+                    for (Reviewer reviewer : distribution.getReviewers()) {
+                        int f = CCS.paperToReviewerSuitabilityFunction(reviewer, paper);
+                        if (f < CCS.INF) {
+                            fList.add(new FuncReviewerPair(f, reviewer));
+                        }
+                    }
+                    Collections.sort(fList);
+                    for (FuncReviewerPair pair : fList) {
+                        Reviewer reviewer = pair.reviewer;
+                        Row reviewerRow = sheet.createRow(++i);
+                        int j = -1;
+                        reviewerRow.createCell(++j).setCellValue(pair.f);
+                        reviewerRow.createCell(++j).setCellValue(reviewer.getName());
+                        reviewerRow.createCell(++j).setCellValue(reviewer.excelFields.getFieldValue(ExcelFields.PaperField.ACM_CCS));
+                    }
+                    sheet.createRow(++i);
+                }
+                FileOutputStream outputStream = new FileOutputStream(file.getPath());
+                workbook.write(outputStream);
+                workbook.close();
+            }
+        } catch (Exception exception) {
+            AuxiliaryControllerMethods.showAlertWindow(
+                    "Ошибка при попытки сохранить Excel-файл", "", Alert.AlertType.ERROR);
+            exception.printStackTrace();
+        }
+    }
+
 
     @FXML
     public void drawDistributionList() {

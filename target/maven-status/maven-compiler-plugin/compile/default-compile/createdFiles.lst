@@ -1,4 +1,5 @@
 com\coursework\MainLauncher.class
+com\coursework\MainWindowController$1FuncReviewerPair.class
 com\coursework\ExcelFields$ReviewerField.class
 com\coursework\ExcelFields.class
 com\coursework\Distribution.class

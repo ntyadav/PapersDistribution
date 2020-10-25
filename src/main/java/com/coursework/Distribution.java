@@ -14,6 +14,9 @@ public class Distribution {
     public ArrayList<Reviewer> getReviewers() {
         return reviewers;
     }
+    public ArrayList<Paper> getPapers() {
+        return papers;
+    }
 
     public boolean distributeTwoTimes() {
         for (Reviewer reviewer : reviewers) {

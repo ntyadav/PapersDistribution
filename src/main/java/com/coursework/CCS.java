@@ -129,17 +129,17 @@ public class CCS {
 
     public static int paperToReviewerSuitabilityFunction(Reviewer reviewer, Paper paper) {
         if (reviewer.getStudentPapers().contains(paper)) {
-            return INF;
+            return INF * 2;
         }
         if (paper.getBlacklist().contains(reviewer)) {
-            return INF / 2;
+            return INF * 3;
         }
-        int min = INF / 3;
+        int min = INF;
         final int k = 3;
         for (Subject paperSubject : paper.getSubjectAreas()) {
             for (Subject reviewerSubject : reviewer.getSubjectAreas()) {
                 Subject lca = lastCommonAncestor(reviewerSubject, paperSubject);
-                int f = INF / 3;
+                int f = INF;
                 if (lca == paperSubject) {
                     f = (reviewerSubject.height - lca.height) * k;
                 } else if (lca == reviewerSubject) {
