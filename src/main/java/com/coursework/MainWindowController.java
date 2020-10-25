@@ -24,7 +24,10 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class MainWindowController {
 
@@ -45,6 +48,7 @@ public class MainWindowController {
     Distribution distribution;
     Paper movingPaper = null;
     Paper selectedPaper = null;
+    Reviewer selectedPaperReviewer = null;
 
     private Runnable mainWindowExceptionHandler;
 
@@ -105,7 +109,7 @@ public class MainWindowController {
 
     @FXML
     private synchronized void distributeButtonClicked() {
-        if (!distribution.hungarianAlgorithmDistribution()) {
+        if (!distribution.distributeTwoTimes()) {
             exceptionHandle();
             return;
         }
@@ -141,19 +145,25 @@ public class MainWindowController {
                 LinkedList<Reviewer> emptyReviewers = new LinkedList<>();
                 Row firstRow = sheet.createRow(i++);
                 int j = 0;
-                String[] columnTitles = {"Работа", "ACM CCS работы", "ФИО рецензента", "Подразделение", "ACM CCS рецензента",
-                        "Макс. кол-во работ рецензента", "Почта рецензента"};
+                String[] columnTitles = {"Работа", "ACM CCS работы", "ФИО рецензента", "ACM CCS рецензента",
+                        "Макс. кол-во работ рецензента"};
                 for (String s : columnTitles) {
                     firstRow.createCell(j++).setCellValue(s);
                 }
+                ArrayList<Paper> uniqPapers = new ArrayList<>();
                 for (Reviewer reviewer : distribution.getReviewers()) {
                     if (reviewer.getStudentPapers().isEmpty()) {
                         emptyReviewers.add(reviewer);
                         continue;
                     }
                     for (Paper paper : reviewer.getStudentPapers()) {
-                        Row row = sheet.createRow(i++);
-                        paper.printRow(row);
+                        if (!uniqPapers.contains(paper)) {
+                            uniqPapers.add(paper);
+                            for (int k = 0; k < paper.getReviewersSize(); k++) {
+                                Row row = sheet.createRow(i++);
+                                paper.printRow(row, k);
+                            }
+                        }
                     }
                 }
                 sheet.createRow(i++);
@@ -209,6 +219,7 @@ public class MainWindowController {
             reviewerTextFlow.setOnMouseClicked((MouseEvent mouseEvent) -> {
                 if (mouseEvent.getButton().equals(MouseButton.PRIMARY)) {
                     if (mouseEvent.getClickCount() == 2 && movingPaper != null) {
+                        movingPaper.removeReviwer(selectedPaperReviewer);
                         reviewer.addPaper(movingPaper);
                         movingPaper = null;
                         drawDistributionList();
@@ -221,6 +232,7 @@ public class MainWindowController {
                 TextFlow paperTextFlow = createDistributionListElement(paper.toString(), false);
                 paperTextFlow.setOnContextMenuRequested((ContextMenuEvent event) -> {
                     selectedPaper = paper;
+                    selectedPaperReviewer = reviewer;
                     contextMenu.show(paperTextFlow, event.getScreenX(), event.getScreenY());
                     promptLabel.setVisible(false);
                     movingPaper = null;

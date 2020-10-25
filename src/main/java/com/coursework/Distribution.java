@@ -4,7 +4,6 @@ import org.apache.poi.ss.usermodel.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Random;
 
 public class Distribution {
@@ -16,12 +15,16 @@ public class Distribution {
         return reviewers;
     }
 
-    public boolean hungarianAlgorithmDistribution() {
-        final long timer = System.currentTimeMillis();
-        final double timeout = 5000;
+    public boolean distributeTwoTimes() {
         for (Reviewer reviewer : reviewers) {
             reviewer.clearPapers();
         }
+        return (hungarianAlgDistribution() && hungarianAlgDistribution());
+    }
+
+    public boolean hungarianAlgDistribution() {
+        final long timer = System.currentTimeMillis();
+        final double timeout = 5000;
         ArrayList<Reviewer> reviewerPlaces = new ArrayList<>();
         for (Reviewer reviewer : reviewers) {
             for (int i = 0; i < reviewer.maxPapersNum; i++) {
@@ -166,9 +169,14 @@ public class Distribution {
                 break;
             }
             ExcelFields excelFields = new ExcelFields(fieldNames, readWorkbookRow(row));
-            Paper paper = new Paper(excelFields);
-            papers.add(paper);
-            if (!paper.isCorrect()) {
+            Paper newPaper = new Paper(excelFields);
+            for (Paper paper : papers) {
+                if (paper.getTitle().equals(newPaper.getTitle())) {
+                    newPaper = paper;
+                }
+            }
+            papers.add(newPaper);
+            if (!newPaper.isCorrect()) {
                 return false;
             }
             Reviewer reviewer = new Reviewer(excelFields);
@@ -182,7 +190,7 @@ public class Distribution {
             }
             if (b)
                 reviewers.add(reviewer);
-            reviewer.addPaper(paper);
+            reviewer.addPaper(newPaper);
             if (!reviewer.isCorrect()) {
                 return false;
             }
