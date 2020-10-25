@@ -54,21 +54,21 @@ class Reviewer {
 
     public void addPaper(Paper paper) {
         if (!studentPapers.contains(paper)) {
-            paper.setReviewer(this);
+            paper.addReviewer(this);
             studentPapers.add(paper);
         }
     }
 
     public void clearPapers() {
         for (int i = 0; i < studentPapers.size(); i++) {
-            studentPapers.get(i).setReviewer(null);
+            studentPapers.get(i).removeReviwer(this);
         }
         studentPapers.clear();
     }
 
-    public void removePaper(Paper paper) {
+/*    public void removePaper(Paper paper) {
         studentPapers.remove(paper);
-    }
+    }*/
 
 
     public boolean hasMaxPapersNum() {

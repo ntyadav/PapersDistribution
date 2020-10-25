@@ -10,12 +10,16 @@ public class Paper {
     public final ExcelFields excelFields;
     private final ArrayList<CCS.Subject> subjectAreas;
     private final ArrayList<Reviewer> blacklist = new ArrayList<>();
-    private Reviewer reviewer;
+    private final ArrayList<Reviewer> reviewers = new ArrayList<>();
 
     public String getTitle() {
         if (excelFields == null)
             return "";
         return excelFields.getFieldValue(ExcelFields.PaperField.TITLE);
+    }
+
+    public int getReviewersSize() {
+        return reviewers.size();
     }
 
     public Paper(ExcelFields excelFields) {
@@ -42,31 +46,32 @@ public class Paper {
         }
     }
 
+    public void removeReviwer(Reviewer reviewer) {
+        reviewers.remove(reviewer);
+        reviewer.getStudentPapers().remove(this);
+    }
+
     public boolean isCorrect() {
         return (getTitle() != null) && !getTitle().isEmpty();
     }
 
 
-    public void setReviewer(Reviewer newReviewer) {
-        if (reviewer != null) {
-            reviewer.removePaper(this);
+    public void addReviewer(Reviewer newReviewer) {
+        if (newReviewer != null && !reviewers.contains(newReviewer)) {
+            reviewers.add(newReviewer);
         }
-        reviewer = newReviewer;
     }
 
-    public void printRow(Row row) {
+    public void printRow(Row row, int k) {
         int i = 0;
         row.createCell(i++).setCellValue(getTitle());
         row.createCell(i++).setCellValue(excelFields.getFieldValue(ExcelFields.PaperField.ACM_CCS));
-        if (reviewer != null) {
-            row.createCell(i++).setCellValue(reviewer.excelFields.getFieldValue(ExcelFields.ReviewerField.NAME));
-            row.createCell(i++).setCellValue(reviewer.excelFields.getFieldValue(ExcelFields.ReviewerField.UNIT));
-            row.createCell(i++).setCellValue(reviewer.excelFields.getFieldValue(ExcelFields.ReviewerField.ACM_CCS));
-            row.createCell(i++).setCellValue(
-                    Integer.parseInt(reviewer.excelFields.getFieldValue(ExcelFields.ReviewerField.MAX_PAPER_NUM)));
-            row.createCell(i++).setCellValue(
-                    (reviewer.excelFields.getFieldValue(ExcelFields.ReviewerField.EMAIL)));
-        }
+        Reviewer reviewer = reviewers.get(k);
+        row.createCell(i++).setCellValue(reviewer.excelFields.getFieldValue(ExcelFields.ReviewerField.NAME));
+        row.createCell(i++).setCellValue(reviewer.excelFields.getFieldValue(ExcelFields.ReviewerField.ACM_CCS));
+        row.createCell(i++).setCellValue(
+                Integer.parseInt(reviewer.excelFields.getFieldValue(ExcelFields.ReviewerField.MAX_PAPER_NUM)));
+
     }
 
 /*    public void printToRow(Row row) {
