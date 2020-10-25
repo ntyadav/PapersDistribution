@@ -30,7 +30,7 @@ public class Distribution {
         final double timeout = 5000;
         ArrayList<Reviewer> reviewerPlaces = new ArrayList<>();
         for (Reviewer reviewer : reviewers) {
-            for (int i = 0; i < reviewer.maxPapersNum; i++) {
+            for (int i = 0; i < reviewer.maxPapersNum - reviewer.getStudentPapers().size(); i++) {
                 reviewerPlaces.add(reviewer);
             }
         }
